@@ -1,0 +1,22 @@
+{
+  "sites": [
+    {
+      "id": "source_a",
+      "name": "59itou",
+      "url": "https://example.invalid/source-a",
+      "wait_seconds": 25,
+      "dismiss_texts": ["×"],
+      "click_texts": ["竞彩足球"],
+      "after_click_wait_seconds": 20
+    },
+    {
+      "id": "source_b",
+      "name": "tiantianyouliao",
+      "url": "https://example.invalid/source-b",
+      "wait_seconds": 25,
+      "dismiss_texts": ["知道了"],
+      "click_texts": ["竞足"],
+      "after_click_wait_seconds": 20
+    }
+  ]
+}
