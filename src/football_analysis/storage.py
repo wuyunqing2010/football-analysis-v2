@@ -152,6 +152,18 @@ CREATE TABLE IF NOT EXISTS backfill_state (
     consecutive_empty INTEGER DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS source_health (
+    source_id VARCHAR PRIMARY KEY,
+    checked_at TIMESTAMPTZ NOT NULL,
+    status VARCHAR NOT NULL,
+    consecutive_failures INTEGER NOT NULL DEFAULT 0,
+    last_success_at TIMESTAMPTZ,
+    latency_ms DOUBLE,
+    http_status INTEGER,
+    records_seen INTEGER DEFAULT 0,
+    error_message VARCHAR
+);
+
 CREATE TABLE IF NOT EXISTS backups (
     backup_path VARCHAR PRIMARY KEY,
     created_at TIMESTAMPTZ NOT NULL,
@@ -194,7 +206,7 @@ def init_database(path: str | Path) -> Path:
                 "UPDATE backfill_state SET last_cursor=coalesce(last_cursor, cursor)"
             )
         connection.execute(
-            """INSERT INTO schema_metadata(key, value) VALUES ('schema_version', '2')
+            """INSERT INTO schema_metadata(key, value) VALUES ('schema_version', '3')
                ON CONFLICT(key) DO UPDATE SET value=excluded.value,
                updated_at=now()"""
         )

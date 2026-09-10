@@ -8,12 +8,15 @@ from .config import load_sites
 from .collect import collect_once
 from .backup import create_backup
 from .history import backfill
+from .health import check_sources
 from .maintenance import optimize_storage
 from .model import train_and_backtest
 from .probe import run_probe
 from .report import full_report, status_report
 from .storage import init_database
 from .summary import summarize
+from .snapshot import latest_match_analysis, publish_snapshot
+from .web import serve
 
 
 DEFAULT_DATA_ROOT = Path("/var/lib/football-data")
@@ -66,6 +69,26 @@ def _parser() -> argparse.ArgumentParser:
     optimize = subparsers.add_parser("optimize", help="checkpoint database and clean partial compressed files")
     optimize.add_argument("--db", default=str(DEFAULT_DATA_ROOT / "football.duckdb"))
     optimize.add_argument("--data", default=str(DEFAULT_DATA_ROOT))
+
+    health = subparsers.add_parser("health-check", help="check and record source health")
+    health.add_argument("--config", default="config/sites.local.json")
+    health.add_argument("--data", default=str(DEFAULT_DATA_ROOT))
+    health.add_argument("--db", default=None)
+
+    publish = subparsers.add_parser("publish", help="publish a sanitized read-only snapshot")
+    publish.add_argument("--data", default=str(DEFAULT_DATA_ROOT))
+    publish.add_argument("--db", default=None)
+    publish.add_argument("--limit", type=int, default=100)
+
+    analyze = subparsers.add_parser("analyze", help="print latest public match probabilities")
+    analyze.add_argument("--db", default=str(DEFAULT_DATA_ROOT / "football.duckdb"))
+    analyze.add_argument("--models", default=str(DEFAULT_DATA_ROOT / "models"))
+    analyze.add_argument("--limit", type=int, default=50)
+
+    web = subparsers.add_parser("serve", help="serve the mobile status page and read-only API")
+    web.add_argument("--host", default="0.0.0.0")
+    web.add_argument("--port", type=int, default=8787)
+    web.add_argument("--data", default=str(DEFAULT_DATA_ROOT))
     return parser
 
 
@@ -103,6 +126,15 @@ def main() -> None:
         print(json.dumps(create_backup(args.db, args.output, args.keep), ensure_ascii=False, indent=2))
     elif args.command == "optimize":
         print(json.dumps(optimize_storage(args.db, args.data), ensure_ascii=False, indent=2))
+    elif args.command == "health-check":
+        print(json.dumps(check_sources(args.config, args.data, args.db), ensure_ascii=False, indent=2))
+    elif args.command == "publish":
+        db = args.db or str(Path(args.data) / "football.duckdb")
+        print(f"Published: {publish_snapshot(db, args.data, args.limit)}")
+    elif args.command == "analyze":
+        print(json.dumps(latest_match_analysis(args.db, args.models, args.limit), ensure_ascii=False, indent=2))
+    elif args.command == "serve":
+        serve(args.host, args.port, args.data)
 
 
 if __name__ == "__main__":

@@ -16,7 +16,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   python3 python3-pip python3.12-venv git curl unzip jq \
   ca-certificates util-linux
 
-mkdir -p "${PROJECT_DIR}" "${DATA_DIR}"/{raw,models,backups} \
+mkdir -p "${PROJECT_DIR}" "${DATA_DIR}"/{raw,models,backups,public} \
   /var/log/football-system
 if [[ ! -x "${VENV_DIR}/bin/python" ]]; then
   python3 -m venv "${VENV_DIR}"
@@ -37,4 +37,5 @@ chmod +x "${PROJECT_DIR}/scripts/install_service.sh"
 "${VENV_DIR}/bin/football-analysis" init-db
 bash "${PROJECT_DIR}/scripts/install_service.sh"
 
-echo "安装完成：实时采集、历史回填、训练、备份和存储维护均已启用。"
+echo "安装完成：采集、健康监控、历史回填、训练、备份、手机状态页和只读接口均已启用。"
+echo "手机访问：http://VPS公网IP:8787/（请在云防火墙中放行 TCP 8787）。"

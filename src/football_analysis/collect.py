@@ -324,21 +324,26 @@ def _insert(db: Path, run_id: str, captured: datetime, digest: str, matches: lis
 
 
 def collect_once(config_path: str | Path, data_root: str | Path, db_path: str | Path | None = None) -> dict[str, Any]:
+    # Imported locally to keep the adapter registry independent from startup
+    # order while its built-in adapters reuse this module's parsers.
+    from .adapters import configured_adapters
+
     root = Path(data_root)
     db = Path(db_path) if db_path else root / "football.duckdb"
     init_database(db)
-    sites = {site.id: site for site in load_sites(config_path)}
+    sites = load_sites(config_path)
     captured, run_id = datetime.now(timezone.utc), uuid.uuid4().hex
     summary: dict[str, Any] = {"run_id": run_id, "captured_at": captured.isoformat(), "sources": {}}
-    jobs = [("source_a", _source_a_endpoint(sites["source_a"]), parse_source_a, _fetch),
-            ("source_b", SOURCE_B_ENDPOINT, parse_source_b, _fetch)]
-    for source_id, endpoint, parser, fetcher in jobs:
-        site, started = sites[source_id], datetime.now(timezone.utc)
+    for site, adapter in configured_adapters(sites):
+        source_id = site.id
+        started = datetime.now(timezone.utc)
+        endpoint = site.url
         try:
-            payload = fetcher(endpoint, site.url)
+            endpoint = adapter.live_endpoint(site)
+            payload = adapter.fetcher(endpoint, site.url)
             raw_path, digest = _save_raw(root, source_id, captured, payload)
             _record_raw_payload(db, run_id, source_id, captured, endpoint, raw_path, digest)
-            matches = parser(payload)
+            matches = adapter.parser(payload)
             if not matches:
                 raise ValueError("Endpoint returned no matches")
             counts = _insert(db, run_id, captured, digest, matches)

@@ -21,9 +21,8 @@ from .collect import (
     _match_key,
     _record_raw_payload,
     _save_raw,
-    parse_source_a,
-    parse_source_b,
 )
+from .adapters import adapter_for
 from .config import SiteConfig, load_sites
 from .privacy import sanitize
 from .storage import init_database
@@ -37,10 +36,6 @@ DENIED_URL_PARTS = (
     "/recommend/", "/recommended", "/specialist", "/member/", "/order/",
     "/pay/", "/project", "/sharebuy/", "/shop/",
 )
-ALLOWED_URL_PARTS = {
-    "source_a": ("/api/match/", "/api/paijiang/"),
-    "source_b": ("/api/match/", "/api/forecast/smart/select/details"),
-}
 PAGINATION_TEXT = (
     re.compile(r"^加载更多"),
     re.compile(r"^下一页$"),
@@ -149,7 +144,7 @@ def _allowed_response(site: SiteConfig, url: str) -> bool:
     lowered = url.casefold()
     if any(part in lowered for part in DENIED_URL_PARTS):
         return False
-    return any(part in lowered for part in ALLOWED_URL_PARTS[site.id])
+    return any(part in lowered for part in adapter_for(site.id).history_url_parts)
 
 
 def _page_field(value: Any, path: tuple[str, ...] = ()) -> tuple[tuple[str, ...], int] | None:
@@ -662,11 +657,7 @@ def backfill(
                     content_type=record["content_type"],
                 ):
                     new_payloads += 1
-                parser = {
-                    "source_a": parse_source_a,
-                    "source_b": parse_source_b,
-                }[site.id]
-                matches = parser(payload)
+                matches = adapter_for(site.id).parser(payload)
                 if matches:
                     counts = _insert(
                         db, run_id, result["captured"], digest, matches

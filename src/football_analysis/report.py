@@ -34,6 +34,12 @@ def status_report(db_path: str | Path) -> str:
           ORDER BY source_id""").fetchall()
         raw = con.execute("""SELECT count(*), coalesce(sum(byte_count),0),
           coalesce(sum(stored_bytes),0) FROM payload_objects""").fetchone()
+        health = con.execute("""SELECT source_id, status, consecutive_failures,
+          http_status, records_seen, checked_at FROM source_health
+          WHERE source_id IN ('source_a','source_b') ORDER BY source_id""").fetchall()
+        health = con.execute("""SELECT source_id, status, consecutive_failures,
+          http_status, records_seen, checked_at FROM source_health
+          WHERE source_id IN ('source_a','source_b') ORDER BY source_id""").fetchall()
     original, stored = int(raw[1]), int(raw[2])
     saving = (1 - stored / original) * 100 if original else 0
     lines = ["足球数据仓库状态",
@@ -41,6 +47,16 @@ def status_report(db_path: str | Path) -> str:
              f"客观模型字段：{counts[5]}  原始对象：{raw[0]}  压缩节省：{saving:.1f}%",
              f"最近采集：{counts[4]}"]
     lines += [f"{s}: 比赛 {m}，赔率 {o}，最近 {t}" for s, m, o, t in sources]
+    lines += [
+        f"{source}健康：{status}，连续失败{failures}次，HTTP {http_status}，"
+        f"可解析比赛{records}，检查于{checked_at}"
+        for source, status, failures, http_status, records, checked_at in health
+    ]
+    lines += [
+        f"{source}健康：{status}，连续失败{failures}次，HTTP {http_status}，"
+        f"可解析比赛{records}，检查于{checked_at}"
+        for source, status, failures, http_status, records, checked_at in health
+    ]
     lines += [
         f"{source}历史：{status}，断点第{pages}页，范围 {oldest} 至 {newest}，"
         f"唯一响应{payloads}，连续无新增{empty}次，最近{last_run}"
